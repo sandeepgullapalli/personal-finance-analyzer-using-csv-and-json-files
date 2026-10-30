@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpendPulse | Personal Finance & Statement Analyzer</title>
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="min-h-full flex flex-col bg-slate-950 font-sans antialiased text-slate-200">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/static/logo.png" alt="SpendPulse Logo" class="h-10 w-10 rounded-xl shadow-lg shadow-indigo-500/20">
+        <div>
+          <span class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            SpendPulse
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">v1.0</span>
+          </span>
+          <p class="text-xs text-slate-400">Universal CSV & JSON Financial Statement Analyzer</p>
+        </div>
+      </div>
+
+      <!-- Quick Sample Loader & Upload Buttons -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400 hidden md:inline">Quick Test:</span>
+        <button onclick="loadSampleDataset('checking_csv')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+          Bank CSV
+        </button>
+        <button onclick="loadSampleDataset('credit_card_json')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+          <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-amber-400"></i>
+          Card JSON
+        </button>
+        <button onclick="loadSampleDataset('arbitrary_csv')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 hidden sm:flex">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-400"></i>
+          Custom CSV
+        </button>
+        <label for="fileInput" class="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 cursor-pointer">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          Upload File
+        </label>
+        <input type="file" id="fileInput" class="hidden" accept=".csv,.json,.txt,.tsv" onchange="handleFileSelect(event)">
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Upload & Drop Zone Hero -->
+    <section id="uploadSection" class="relative group">
+      <div id="dropZone" class="relative border-2 border-dashed border-slate-700/80 hover:border-indigo-500/80 bg-slate-900/40 hover:bg-indigo-950/10 rounded-2xl p-6 sm:p-8 text-center transition-all duration-200 cursor-pointer overflow-hidden">
+        <!-- Native drop and click input covering the entire box -->
+        <input type="file" id="dropFileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept=".csv,.json,.txt,.tsv" onchange="handleFileSelect(event)" title="Drop or click to select CSV or JSON statement">
+
+        <div class="max-w-md mx-auto space-y-3 pointer-events-none">
+          <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 id="dropTitle" class="text-base font-semibold text-white">Drop any CSV or JSON statement here</h2>
+            <p id="dropSubtitle" class="text-xs text-slate-400 mt-1">Supports bank statements, credit cards, UPI exports, or customized data files.</p>
+          </div>
+          <div class="flex items-center justify-center gap-2 text-xs text-slate-400 pt-1">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60"><i data-lucide="check" class="w-3 h-3 text-emerald-400"></i> Auto-detect columns</span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60"><i data-lucide="shield-check" class="w-3 h-3 text-indigo-400"></i> 100% Local privacy</span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60"><i data-lucide="filter" class="w-3 h-3 text-violet-400"></i> Deduplication</span>
+          </div>
+        </div>
+
+        <!-- Download Test Files Box -->
+        <div class="relative z-30 pt-3 mt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-2" onclick="event.stopPropagation()">
+          <span class="text-xs text-slate-400">Need a test file?</span>
+          <a href="/api/download-sample/csv" download class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-medium transition text-xs">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Sample CSV
+          </a>
+          <a href="/api/download-sample/json" download class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-medium transition text-xs">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Sample JSON
+          </a>
+        </div>
+      </div>
+      <!-- Loading Spinner Overlay -->
+      <div id="loadingOverlay" class="hidden absolute inset-0 bg-slate-950/70 rounded-2xl flex items-center justify-center z-40">
+        <div class="text-center space-y-2">
+          <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p id="loadingText" class="text-xs text-indigo-300 font-medium">Analyzing your statement...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Statement Status Bar -->
+    <section id="statusBar" class="hidden bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-3">
+        <span class="flex h-2.5 w-2.5 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span class="text-slate-300 font-medium">Loaded: <strong id="loadedFileName" class="text-white">statement.csv</strong></span>
+        <span class="text-slate-500">|</span>
+        <span class="text-slate-400"><strong id="statusRowCount" class="text-slate-200">0</strong> valid transactions</span>
+        <span class="text-slate-500 hidden sm:inline">|</span>
+        <span id="statusDateRange" class="text-slate-400 hidden sm:inline">Date range: -</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportCleanCSV()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1">
+          <i data-lucide="download" class="w-3 h-3"></i>
+          Export Clean CSV
+        </button>
+      </div>
+    </section>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="grid grid-cols-2 md:grid-cols-5 gap-3.5 sm:gap-4">
+      <!-- Income -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span>Total Income</span>
+          <div class="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <div id="kpiIncome" class="text-xl sm:text-2xl font-bold text-emerald-400">₹0.00</div>
+        <p class="text-[11px] text-slate-500 mt-1">Total inflows & credits</p>
+      </div>
+
+      <!-- Expenses -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span>Total Expenses</span>
+          <div class="w-6 h-6 rounded-md bg-rose-500/10 text-rose-400 flex items-center justify-center">
+            <i data-lucide="trending-down" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <div id="kpiExpense" class="text-xl sm:text-2xl font-bold text-rose-400">₹0.00</div>
+        <p class="text-[11px] text-slate-500 mt-1">Total debits & charges</p>
+      </div>
+
+      <!-- Net Cashflow -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span>Net Cash Flow</span>
+          <div class="w-6 h-6 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+            <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <div id="kpiNet" class="text-xl sm:text-2xl font-bold text-white">₹0.00</div>
+        <p class="text-[11px] text-slate-500 mt-1">Income minus expenses</p>
+      </div>
+
+      <!-- Savings Rate -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span>Savings Rate</span>
+          <div class="w-6 h-6 rounded-md bg-violet-500/10 text-violet-400 flex items-center justify-center">
+            <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <div id="kpiSavings" class="text-xl sm:text-2xl font-bold text-violet-400">0.0%</div>
+        <p class="text-[11px] text-slate-500 mt-1">Net savings efficiency</p>
+      </div>
+
+      <!-- Subscriptions Found -->
+      <div class="col-span-2 md:col-span-1 bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span>Recurring Bills</span>
+          <div class="w-6 h-6 rounded-md bg-amber-500/10 text-amber-400 flex items-center justify-center">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+        <div id="kpiRecurring" class="text-xl sm:text-2xl font-bold text-amber-400">0</div>
+        <p id="kpiRecurringSubtitle" class="text-[11px] text-slate-500 mt-1">Detected subscriptions</p>
+      </div>
+    </section>
+
+    <!-- Visual Charts Grid -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Monthly Cashflow Chart -->
+      <div class="lg:col-span-2 bg-slate-900/70 border border-slate-800/80 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Monthly Cash Flow Trend</h3>
+            <p class="text-xs text-slate-400">Inflows vs Outflows month-over-month</p>
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Income vs Expense</span>
+        </div>
+        <div class="h-64 sm:h-72">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Category Doughnut Chart -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Spending by Category</h3>
+            <p class="text-xs text-slate-400">Proportional expense allocation</p>
+          </div>
+        </div>
+        <div class="flex-1 relative min-h-[220px] flex items-center justify-center">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recurring Subscriptions & Budget Health -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Recurring Charges -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">Detected Subscriptions & Recurring Bills</h3>
+              <p class="text-xs text-slate-400">Periodic payments detected automatically</p>
+            </div>
+          </div>
+        </div>
+        <div id="recurringList" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          <div class="text-center py-8 text-xs text-slate-500">No transactions loaded yet.</div>
+        </div>
+      </div>
+
+      <!-- Budget Health Tracker -->
+      <div class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <i data-lucide="target" class="w-3.5 h-3.5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">Category Budget Health</h3>
+              <p class="text-xs text-slate-400">Expense pacing against target limits</p>
+            </div>
+          </div>
+        </div>
+        <div id="budgetList" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+          <div class="text-center py-8 text-xs text-slate-500">No transactions loaded yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transactions Data Explorer Table -->
+    <section class="bg-slate-900/70 border border-slate-800/80 rounded-xl p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-white">Transactions Ledger</h3>
+          <p class="text-xs text-slate-400">Search, filter, and inspect categorized statement rows</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+            <input type="text" id="txSearchInput" oninput="applyTableFilters()" placeholder="Search merchant..."
+              class="w-40 sm:w-52 pl-8 pr-3 py-1.5 text-xs bg-slate-800/90 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+          </div>
+          <select id="txCategoryFilter" onchange="applyTableFilters()" class="text-xs py-1.5 px-2 bg-slate-800/90 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Categories</option>
+          </select>
+          <select id="txTypeFilter" onchange="applyTableFilters()" class="text-xs py-1.5 px-2 bg-slate-800/90 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Types</option>
+            <option value="income">Income Only</option>
+            <option value="expense">Expenses Only</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-slate-800">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-800/60 text-slate-400 uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-4">Date</th>
+              <th class="py-2.5 px-4">Merchant / Payee</th>
+              <th class="py-2.5 px-4 hidden md:table-cell">Raw Description</th>
+              <th class="py-2.5 px-4">Category</th>
+              <th class="py-2.5 px-4 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody" class="divide-y divide-slate-800/60 font-mono">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500 font-sans">
+                No statement loaded. Use the buttons above or drop a file to begin analysis.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-slate-400 mt-3 pt-2">
+        <div id="paginationInfo">Showing 0 of 0 transactions</div>
+        <div class="flex items-center gap-2">
+          <button id="prevPageBtn" onclick="changePage(-1)" disabled class="px-2.5 py-1 rounded bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 text-slate-200 transition">Previous</button>
+          <span id="currentPageNum" class="px-2 text-slate-300">Page 1</span>
+          <button id="nextPageBtn" onclick="changePage(1)" disabled class="px-2.5 py-1 rounded bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700 text-slate-200 transition">Next</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Column Mapping Modal -->
+  <div id="mapperModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-semibold text-white">Dataset Column Mapper</h3>
+          <p class="text-xs text-slate-400">Map columns for <span id="modalFileName" class="text-indigo-400 font-medium">file</span></p>
+        </div>
+        <button onclick="closeMapperModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">Date Column *</label>
+          <select id="mapDateCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">Description / Merchant Column *</label>
+          <select id="mapDescCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Single Amount Column</label>
+            <select id="mapAmountCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="">-- None (Split Debit/Credit) --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Category Column (Optional)</label>
+            <select id="mapCategoryCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="">-- Auto-Categorize --</option>
+            </select>
+          </div>
+        </div>
+        <div class="border-t border-slate-800 pt-3">
+          <span class="text-slate-400 font-medium block mb-2">Or separate Debit & Credit columns:</span>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Debit / Outflow</label>
+              <select id="mapDebitCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="">-- Select Column --</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Credit / Inflow</label>
+              <select id="mapCreditCol" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="">-- Select Column --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-2">
+          <input type="checkbox" id="mapInvertAmount" class="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0">
+          <label for="mapInvertAmount" class="text-slate-300">Invert amount signs (Use for credit cards where charges are positive)</label>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+        <button onclick="closeMapperModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
+        <button onclick="applyCustomMappingAndAnalyze()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-md shadow-indigo-600/30">
+          Apply & Analyze
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-900/40 text-slate-500 text-xs py-4 text-center">
+    SpendPulse Local-First Personal Finance Analyzer &bull; Zero external cloud telemetry &bull; Privacy Preserved
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
